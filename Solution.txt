@@ -1,27 +1,46 @@
-const { Connection, LAMPORTS_PER_SOL } = require('@solana/web3.js');
+const { Connection, PublicKey, LAMPORTS_PER_SOL } = require("@solana/web3.js");
+const yargs = require("yargs");
 
-// ... other code ...
-
-// Get the account address from the command-line argument
-const recipientAddress = process.argv[2]; // Assuming the address is the 2nd argument
-
-// Validate the recipient address
-if (!isValidPublicKey(recipientAddress)) {
-  console.error('Invalid recipient address provided.');
-  process.exit(1);
-}
-
-// Create a PublicKey object from the recipient address
-const recipientPublicKey = new PublicKey(recipientAddress);
-
-// Request the airdrop to the specified recipient
-try {
-  const fromAirDropSignature = await connection.requestAirdrop(
-    recipientPublicKey,
-    2 * LAMPORTS_PER_SOL
+async function airDropSol(accountAddress) {
+  const connection = new Connection(
+    "https://api.devnet.solana.com",
+    "confirmed"
   );
+  const publicKey = new PublicKey(accountAddress);
 
-  console.log('Airdrop successful!');
-} catch (error) {
-  console.error('Airdrop failed:', error);
+  try {
+    const fromAirDropSignature = await connection.requestAirdrop(
+      publicKey,
+      2 * LAMPORTS_PER_SOL
+    );
+
+    // Wait for the airdrop confirmation
+    await connection.confirmTransaction(fromAirDropSignature);
+
+    console.log("Airdrop successful!");
+  } catch (error) {
+    console.error("Airdrop failed:", error);
+  }
 }
+
+// Command-line arguments setup using yargs
+const argv = yargs
+  .option("account", {
+    alias: "a",
+    description: "Account address to receive the airdrop",
+    demandOption: true,
+  })
+  .help()
+  .alias("help", "h").argv;
+
+async function mainFunction() {
+  const accountAddress = argv.account;
+
+  try {
+    await airDropSol(accountAddress);
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+mainFunction();
